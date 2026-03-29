@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COURTSIDE — 我的賽事追蹤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root {
+  --w: #fff;
+  --g50: #f8f8f8;
+  --g100: #f0f0f0;
+  --g200: #e3e3e3;
+  --g400: #aaa;
+  --g600: #666;
+  --g800: #222;
+  --black: #111;
+
+  --nba-c: #C9082A; --nba-bg: #fff4f5; --nba-bd: #ffd0d4;
+  --mlb-c: #002D72; --mlb-bg: #f0f4ff; --mlb-bd: #c5d2f0;
+  --f1-c:  #E10600; --f1-bg:  #fff4f0; --f1-bd:  #ffd0c8;
+  --bwf-c: #00873E; --bwf-bg: #f0faf4; --bwf-bd: #b0e0c4;
+
+  /* active sport theme (updated by JS) */
+  --sc: var(--nba-c);
+  --sbg: var(--nba-bg);
+  --sbd: var(--nba-bd);
+
+  --nav-h: 56px;
+  --tab-h: 48px;
+  --r: 12px; --rs: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.04);
+  --shadow-h: 0 2px 8px rgba(0,0,0,.09), 0 8px 28px rgba(0,0,0,.06);
+  --fn-d: 'Barlow Condensed', sans-serif;
+  --fn-b: 'Noto Sans TC', sans-serif;
+  --fn-m: 'DM Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--g50);
+  color: var(--black);
+  font-family: var(--fn-b);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--g200); border-radius: 2px; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+  height: var(--nav-h);
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--g200);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; gap: 12px;
+}
+.nav-logo {
+  font-family: var(--fn-d); font-size: 22px; font-weight: 800;
+  letter-spacing: .05em; color: var(--black); text-decoration: none;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.nav-logo-bar {
+  width: 4px; height: 20px; border-radius: 2px;
+  background: var(--sc); transition: background .35s;
+}
+.nav-links { display: flex; gap: 2px; }
+.nav-link {
+  font-size: 13px; font-weight: 500;
+  padding: 5px 10px; border-radius: var(--rs);
+  color: var(--g600); text-decoration: none; transition: all .15s;
+}
+.nav-link:hover { color: var(--black); background: var(--g100); }
+.nav-link.active { color: var(--sc); background: var(--sbg); }
+.nav-date { font-family: var(--fn-m); font-size: 11px; color: var(--g400); letter-spacing: .04em; }
+.nav-ham {
+  display: none; flex-direction: column; gap: 4px;
+  border: none; background: none; cursor: pointer; padding: 4px;
+}
+.nav-ham span { display: block; width: 20px; height: 2px; background: var(--g800); border-radius: 1px; }
+
+/* ── SPORT TABS ── */
+.sport-tabs {
+  position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 200;
+  height: var(--tab-h);
+  background: var(--w);
+  border-bottom: 1.5px solid var(--g100);
+  display: flex;
+}
+.stab {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: var(--fn-d); font-size: 19px; font-weight: 700; letter-spacing: .04em;
+  color: var(--g400); border: none; background: none; cursor: pointer;
+  position: relative; transition: color .2s; padding: 0;
+}
+.stab::after {
+  content: ''; position: absolute; bottom: -1.5px; left: 0; right: 0;
+  height: 3px; border-radius: 2px 2px 0 0; background: transparent; transition: background .2s;
+}
+.stab-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.stab[data-s="NBA"] .stab-dot { background: var(--nba-c); }
+.stab[data-s="MLB"] .stab-dot { background: var(--mlb-c); }
+.stab[data-s="F1"]  .stab-dot { background: var(--f1-c); }
+.stab[data-s="BWF"] .stab-dot { background: var(--bwf-c); }
+
+.stab.on[data-s="NBA"] { color: var(--nba-c); } .stab.on[data-s="NBA"]::after { background: var(--nba-c); }
+.stab.on[data-s="MLB"] { color: var(--mlb-c); } .stab.on[data-s="MLB"]::after { background: var(--mlb-c); }
+.stab.on[data-s="F1"]  { color: var(--f1-c);  } .stab.on[data-s="F1"]::after  { background: var(--f1-c); }
+.stab.on[data-s="BWF"] { color: var(--bwf-c); } .stab.on[data-s="BWF"]::after { background: var(--bwf-c); }
+
+/* ── MAIN ── */
+main { padding-top: calc(var(--nav-h) + var(--tab-h)); }
+.view { display: none; animation: fadeUp .3s ease both; }
+.view.on { display: block; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── SECTION NAV ── */
+.snav {
+  background: var(--w); border-bottom: 1px solid var(--g100);
+  display: flex; padding: 0 20px; overflow-x: auto; scrollbar-width: none;
+}
+.snav::-webkit-scrollbar { display: none; }
+.snav-btn {
+  font-family: var(--fn-m); font-size: 11px; letter-spacing: .08em;
+  padding: 10px 14px; border: none; background: none; cursor: pointer;
+  color: var(--g400); position: relative; transition: color .15s; white-space: nowrap;
+}
+.snav-btn::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: transparent; transition: background .15s;
+}
+.snav-btn:hover { color: var(--g800); }
+.snav-btn.on { color: var(--sc); }
+.snav-btn.on::after { background: var(--sc); }
+
+/* ── HERO ── */
+.hero {
+  padding: 28px 24px 20px;
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
+  flex-wrap: wrap;
+}
+.hero-left {}
+.hero-title {
+  font-family: var(--fn-d); font-size: clamp(40px, 7vw, 64px);
+  font-weight: 800; line-height: 1; letter-spacing: .03em;
+  color: var(--sc); margin-bottom: 8px; transition: color .35s;
+}
+.hero-sub { font-size: 13px; color: var(--g600); }
+.hero-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.hero-stat {
+  background: var(--w); border: 1px solid var(--g200);
+  border-radius: var(--rs); padding: 8px 14px;
+  display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow);
+}
+.hero-stat-n { font-family: var(--fn-d); font-size: 28px; font-weight: 800; line-height: 1; color: var(--sc); transition: color .35s; }
+.hero-stat-l { font-family: var(--fn-m); font-size: 10px; color: var(--g600); letter-spacing: .07em; line-height: 1.4; }
+
+/* ── CONTENT ── */
+.content { max-width: 1200px; margin: 0 auto; padding: 20px 24px 48px; }
+.section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-title {
+  font-family: var(--fn-d); font-size: 20px; font-weight: 700; letter-spacing: .03em;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::before {
+  content: ''; display: block; width: 3px; height: 16px; border-radius: 2px;
+  background: var(--sc); flex-shrink: 0; transition: background .35s;
+}
+
+/* ── GAME CARDS ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px, 1fr)); gap: 12px; }
+
+.gcard {
+  background: var(--w); border: 1px solid var(--g200);
+  border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow);
+  transition: box-shadow .2s, transform .2s, border-color .2s;
+}
+.gcard:hover { box-shadow: var(--shadow-h); transform: translateY(-2px); border-color: var(--g200); }
+.gcard-bar { height: 3px; }
+.gcard[data-s="NBA"] .gcard-bar { background: var(--nba-c); }
+.gcard[data-s="MLB"] .gcard-bar { background: var(--mlb-c); }
+.gcard[data-s="F1"]  .gcard-bar { background: var(--f1-c); }
+.gcard[data-s="BWF"] .gcard-bar { background: var(--bwf-c); }
+
+.gcard-hd { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 0; }
+.status-badge {
+  font-family: var(--fn-m); font-size: 10px; letter-spacing: .07em;
+  padding: 3px 8px; border-radius: 20px; font-weight: 500;
+  display: flex; align-items: center; gap: 4px;
+}
+.s-live { background: #fef2f2; color: #ef4444; }
+.s-pre  { background: var(--g50); color: var(--g600); }
+.s-fin  { background: var(--g50); color: var(--g400); }
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: #ef4444; animation: blink 1s step-end infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.gcard-fav { background: none; border: none; cursor: pointer; font-size: 15px; color: var(--g200); transition: all .15s; }
+.gcard-fav:hover, .gcard-fav.on { color: #f59e0b; transform: scale(1.15); }
+
+.gcard-body { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gcard-team { text-align: center; flex: 1; }
+.gcard-abbr { font-family: var(--fn-d); font-size: 24px; font-weight: 800; letter-spacing: .03em; line-height: 1; }
+.gcard-name { font-size: 11px; color: var(--g600); margin-top: 3px; line-height: 1.2; }
+.gcard-mid { text-align: center; flex-shrink: 0; }
+.gcard-score { font-family: var(--fn-d); font-size: 30px; font-weight: 800; line-height: 1; display: flex; align-items: center; gap: 5px; }
+.gcard-sep { font-size: 18px; color: var(--g200); }
+.gcard-period { font-family: var(--fn-m); font-size: 10px; color: var(--g400); letter-spacing: .06em; margin-top: 3px; }
+.gcard-vs { font-family: var(--fn-d); font-size: 18px; font-weight: 700; color: var(--g200); }
+
+.gcard-ft {
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--g100);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.gcard-meta { font-family: var(--fn-m); font-size: 10px; color: var(--g400); letter-spacing: .02em; }
+.notify-btn {
+  font-family: var(--fn-m); font-size: 10px; letter-spacing: .05em;
+  padding: 3px 9px; border-radius: 20px;
+  border: 1px solid var(--g200); background: none; color: var(--g600);
+  cursor: pointer; transition: all .15s;
+}
+.notify-btn:hover { border-color: var(--sc); color: var(--sc); }
+.notify-btn.on { background: var(--sbg); border-color: var(--sc); color: var(--sc); }
+
+/* ── SCHEDULE TABLE ── */
+.sched-table { background: var(--w); border: 1px solid var(--g200); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
+.sched-day {
+  font-family: var(--fn-m); font-size: 10px; letter-spacing: .1em;
+  color: var(--g400); padding: 10px 16px 6px;
+  border-bottom: 1px solid var(--g100); background: var(--g50);
+}
+.sched-row {
+  display: grid; grid-template-columns: 64px 1fr 80px 72px;
+  align-items: center; gap: 12px;
+  padding: 11px 16px; border-bottom: 1px solid var(--g100); transition: background .12s;
+}
+.sched-row:last-child { border-bottom: none; }
+.sched-row:hover { background: var(--g50); }
+.sched-sport-tag {
+  font-family: var(--fn-m); font-size: 9px; letter-spacing: .1em;
+  padding: 2px 7px; border-radius: 10px; font-weight: 500; width: fit-content;
+}
+.tag-nba { background: var(--nba-bg); color: var(--nba-c); }
+.tag-mlb { background: var(--mlb-bg); color: var(--mlb-c); }
+.tag-f1  { background: var(--f1-bg);  color: var(--f1-c); }
+.tag-bwf { background: var(--bwf-bg); color: var(--bwf-c); }
+
+.sched-match { font-size: 13px; font-weight: 500; }
+.sched-time { font-family: var(--fn-m); font-size: 11px; color: var(--g400); text-align: right; }
+.sched-action { text-align: right; }
+.sched-notify {
+  font-family: var(--fn-m); font-size: 10px; letter-spacing: .04em;
+  padding: 3px 9px; border-radius: 20px;
+  border: 1px solid var(--g200); background: none; color: var(--g600);
+  cursor: pointer; transition: all .15s;
+}
+.sched-notify:hover { border-color: var(--sc); color: var(--sc); }
+.sched-notify.on { background: var(--sbg); border-color: var(--sc); color: var(--sc); }
+
+/* ── STANDINGS ── */
+.standings-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:640px){ .standings-wrap { grid-template-columns: 1fr; } }
+.stand-table { background: var(--w); border: 1px solid var(--g200); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
+.stand-conf-hd { padding: 12px 16px; font-family: var(--fn-d); font-size: 18px; font-weight: 700; letter-spacing: .03em; border-bottom: 1px solid var(--g100); }
+.stand-cols {
+  display: grid; grid-template-columns: 28px 1fr 36px 36px 52px;
+  gap: 8px; padding: 6px 16px; background: var(--g50);
+  font-family: var(--fn-m); font-size: 9px; letter-spacing: .1em; color: var(--g400);
+  border-bottom: 1px solid var(--g100);
+}
+.stand-row {
+  display: grid; grid-template-columns: 28px 1fr 36px 36px 52px;
+  gap: 8px; align-items: center;
+  padding: 9px 16px; border-bottom: 1px solid var(--g100); font-size: 13px; transition: background .12s;
+}
+.stand-row:last-child { border-bottom: none; }
+.stand-row:hover { background: var(--g50); }
+.stand-rank { font-family: var(--fn-d); font-size: 16px; font-weight: 700; color: var(--g200); text-align: center; }
+.stand-rank.hi { color: var(--sc); }
+.stand-name { font-weight: 500; }
+.stand-num { font-family: var(--fn-m); font-size: 12px; color: var(--g600); text-align: center; }
+.stand-pct { font-family: var(--fn-m); font-size: 11px; color: var(--g400); text-align: center; }
+
+/* ── F1 ── */
+.race-card { background: var(--w); border: 1px solid var(--g200); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
+.race-banner {
+  padding: 22px 24px 20px; min-height: 100px;
+  background: linear-gradient(135deg, #E10600 0%, #ff5533 100%);
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; color: #fff;
+}
+.race-name { font-family: var(--fn-d); font-size: 32px; font-weight: 800; letter-spacing: .02em; line-height: 1; }
+.race-round { font-family: var(--fn-m); font-size: 10px; letter-spacing: .12em; opacity: .8; margin-top: 4px; }
+.race-date-label { font-family: var(--fn-m); font-size: 12px; opacity: .85; text-align: right; }
+.race-podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--g100); }
+.podium-cell { background: var(--w); padding: 14px 10px; text-align: center; }
+.podium-pos { font-family: var(--fn-d); font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.podium-cell:nth-child(1) .podium-pos { color: #F59E0B; }
+.podium-cell:nth-child(2) .podium-pos { color: var(--g400); }
+.podium-cell:nth-child(3) .podium-pos { color: #B45309; }
+.podium-driver { font-size: 13px; font-weight: 600; }
+.podium-team { font-size: 11px; color: var(--g400); }
+.race-results { padding: 14px 16px; }
+.race-results-hd { font-family: var(--fn-m); font-size: 10px; letter-spacing: .1em; color: var(--g400); margin-bottom: 8px; }
+.result-row {
+  display: grid; grid-template-columns: 28px 1fr 120px 80px;
+  gap: 10px; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--g100); font-size: 13px;
+}
+.result-row:last-child { border-bottom: none; }
+.result-pos { font-family: var(--fn-d); font-size: 18px; font-weight: 700; color: var(--g200); }
+.result-name { font-weight: 500; }
+.result-team { font-size: 12px; color: var(--g400); }
+.result-time { font-family: var(--fn-m); font-size: 11px; color: var(--g600); text-align: right; }
+
+/* ── BWF ── */
+.bwf-event { margin-bottom: 24px; }
+.bwf-event-hd {
+  background: var(--w); border: 1px solid var(--g200); border-radius: var(--r);
+  padding: 14px 20px; margin-bottom: 12px; box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.bwf-event-name { font-family: var(--fn-d); font-size: 22px; font-weight: 700; }
+.bwf-event-sub { font-family: var(--fn-m); font-size: 11px; color: var(--g400); letter-spacing: .04em; margin-top: 2px; }
+.bwf-level { font-family: var(--fn-m); font-size: 10px; letter-spacing: .1em; padding: 4px 10px; border-radius: 20px; background: var(--bwf-bg); color: var(--bwf-c); border: 1px solid var(--bwf-bd); }
+.bwf-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.bwf-match {
+  background: var(--w); border: 1px solid var(--g200); border-radius: var(--rs);
+  overflow: hidden; box-shadow: var(--shadow);
+}
+.bwf-match-hd {
+  padding: 7px 12px; background: var(--g50); border-bottom: 1px solid var(--g100);
+  font-family: var(--fn-m); font-size: 10px; letter-spacing: .08em; color: var(--g400);
+  display: flex; justify-content: space-between;
+}
+.bwf-player { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--g100); }
+.bwf-player:last-of-type { border-bottom: none; }
+.bwf-flag { font-size: 16px; }
+.bwf-pname { font-size: 13px; font-weight: 500; flex: 1; }
+.bwf-pname.winner { color: var(--bwf-c); }
+.bwf-scores { display: flex; gap: 6px; font-family: var(--fn-m); font-size: 13px; font-weight: 500; }
+.sc-w { color: var(--bwf-c); }
+.sc-l { color: var(--g400); }
+.bwf-score-bar { padding: 7px 12px; background: var(--g50); font-family: var(--fn-m); font-size: 11px; color: var(--g600); }
+
+/* ── STATES ── */
+.loading, .empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 200px; gap: 12px; color: var(--g400);
+  font-family: var(--fn-m); font-size: 11px; letter-spacing: .06em;
+}
+.spinner { width: 26px; height: 26px; border: 2px solid var(--g100); border-top-color: var(--sc); border-radius: 50%; animation: spin .7s linear infinite; transition: border-top-color .35s; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── API BANNER ── */
+.api-banner {
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--r);
+  padding: 12px 16px; display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: #92400e; margin-bottom: 16px;
+}
+.api-banner a { color: #b45309; font-weight: 600; }
+.api-banner code { background: #fef3c7; padding: 1px 5px; border-radius: 4px; font-family: var(--fn-m); font-size: 12px; }
+
+/* ── DRAWER ── */
+.drawer-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 250;
+  backdrop-filter: blur(3px);
+}
+.drawer-overlay.on { display: block; }
+.drawer {
+  position: absolute; top: var(--nav-h); right: 0; bottom: 0; width: 230px;
+  background: var(--w); border-left: 1px solid var(--g200); padding: 16px;
+}
+.drawer-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--rs);
+  text-decoration: none; color: var(--g800); font-size: 14px; font-weight: 500;
+  margin-bottom: 3px; transition: background .12s;
+}
+.drawer-link:hover { background: var(--g100); }
+.drawer-link.on { color: var(--sc); background: var(--sbg); }
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px) {
+  .nav-links, .nav-date { display: none; }
+  .nav-ham { display: flex; }
+  .sched-row { grid-template-columns: 60px 1fr 70px; }
+  .sched-action { display: none; }
+  .standings-wrap { grid-template-columns: 1fr; }
+}
+@media(min-width:900px) {
+  /* two-col for some sections */
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#" onclick="return false">
+    <div class="nav-logo-bar" id="nav-bar"></div>
+    COURTSIDE
+  </a>
+  <div class="nav-links">
+    <a class="nav-link on" href="#" onclick="goSec('scores',this);return false">成績</a>
+    <a class="nav-link" href="#" onclick="goSec('schedule',this);return false">賽程</a>
+    <a class="nav-link" href="#" onclick="goSec('standings',this);return false">積分榜</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="nav-date" id="nav-date"></span>
+    <button class="nav-ham" onclick="toggleDrawer()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- SPORT TABS -->
+<div class="sport-tabs">
+  <button class="stab on" data-s="NBA" onclick="switchSport('NBA',this)"><span class="stab-dot"></span>NBA</button>
+  <button class="stab"    data-s="MLB" onclick="switchSport('MLB',this)"><span class="stab-dot"></span>MLB</button>
+  <button class="stab"    data-s="F1"  onclick="switchSport('F1',this)"><span class="stab-dot"></span>F1</button>
+  <button class="stab"    data-s="BWF" onclick="switchSport('BWF',this)"><span class="stab-dot"></span>BWF</button>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="drawer" onclick="closeDrawer()">
+  <div class="drawer" onclick="event.stopPropagation()">
+    <div style="font-family:var(--fn-m);font-size:9px;letter-spacing:.15em;color:var(--g400);margin-bottom:10px">SECTIONS</div>
+    <a class="drawer-link on" href="#" onclick="goSec('scores',this);closeDrawer();return false">成績</a>
+    <a class="drawer-link" href="#" onclick="goSec('schedule',this);closeDrawer();return false">賽程</a>
+    <a class="drawer-link" href="#" onclick="goSec('standings',this);closeDrawer();return false">積分榜</a>
+  </div>
+</div>
+
+<!-- ══ NBA ══ -->
+<div class="view on" id="view-NBA">
+  <div class="snav" id="snav-NBA">
+    <button class="snav-btn on" onclick="goSec('scores',this)">今日比賽</button>
+    <button class="snav-btn" onclick="goSec('schedule',this)">賽程</button>
+    <button class="snav-btn" onclick="goSec('standings',this)">積分榜</button>
+  </div>
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-title" id="nba-htitle">NBA</div>
+      <div class="hero-sub">2025–26 Regular Season</div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-n" id="nba-stat-live">—</div><div class="hero-stat-l">LIVE<br>GAMES</div></div>
+        <div class="hero-stat"><div class="hero-stat-n" id="nba-stat-today">—</div><div class="hero-stat-l">TODAY'S<br>GAMES</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="nba-sec-scores">
+      <div class="section-hd"><div class="section-title">今日比賽</div></div>
+      <div class="cards" id="nba-cards"><div class="loading"><div class="spinner"></div>載入中…</div></div>
+    </div>
+    <div id="nba-sec-schedule" style="display:none">
+      <div class="section-hd"><div class="section-title">即將到來</div></div>
+      <div class="sched-table" id="nba-sched"></div>
+    </div>
+    <div id="nba-sec-standings" style="display:none">
+      <div class="section-hd"><div class="section-title">積分榜</div></div>
+      <div class="standings-wrap" id="nba-standings"><div class="loading"><div class="spinner"></div>載入中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MLB ══ -->
+<div class="view" id="view-MLB">
+  <div class="snav" id="snav-MLB">
+    <button class="snav-btn on" onclick="goSec('scores',this)">今日比賽</button>
+    <button class="snav-btn" onclick="goSec('schedule',this)">賽程</button>
+    <button class="snav-btn" onclick="goSec('standings',this)">積分榜</button>
+  </div>
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-title" style="color:var(--mlb-c)">MLB</div>
+      <div class="hero-sub">2026 Season — mlb.com 官方數據</div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-n" id="mlb-stat-live" style="color:var(--mlb-c)">—</div><div class="hero-stat-l">LIVE<br>GAMES</div></div>
+        <div class="hero-stat"><div class="hero-stat-n" id="mlb-stat-today" style="color:var(--mlb-c)">—</div><div class="hero-stat-l">TODAY'S<br>GAMES</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="mlb-sec-scores">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--mlb-c)">今日比賽</div></div>
+      <div class="cards" id="mlb-cards"><div class="loading"><div class="spinner" style="border-top-color:var(--mlb-c)"></div>載入 MLB 數據…</div></div>
+    </div>
+    <div id="mlb-sec-schedule" style="display:none">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--mlb-c)">即將到來</div></div>
+      <div class="sched-table" id="mlb-sched"></div>
+    </div>
+    <div id="mlb-sec-standings" style="display:none">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--mlb-c)">積分榜</div></div>
+      <div class="standings-wrap" id="mlb-standings"><div class="loading"><div class="spinner" style="border-top-color:var(--mlb-c)"></div>載入中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ F1 ══ -->
+<div class="view" id="view-F1">
+  <div class="snav" id="snav-F1">
+    <button class="snav-btn on" onclick="goSec('scores',this)">最新結果</button>
+    <button class="snav-btn" onclick="goSec('schedule',this)">剩餘賽程</button>
+    <button class="snav-btn" onclick="goSec('standings',this)">積分榜</button>
+  </div>
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-title" style="color:var(--f1-c)">FORMULA 1</div>
+      <div class="hero-sub">2026 World Championship — Jolpica API</div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="f1-sec-scores">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--f1-c)">最新站結果</div></div>
+      <div id="f1-race"><div class="loading"><div class="spinner" style="border-top-color:var(--f1-c)"></div>載入 F1 數據…</div></div>
+    </div>
+    <div id="f1-sec-schedule" style="display:none">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--f1-c)">剩餘賽程</div></div>
+      <div class="sched-table" id="f1-sched"></div>
+    </div>
+    <div id="f1-sec-standings" style="display:none">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--f1-c)">車手積分榜</div></div>
+      <div class="standings-wrap" id="f1-standings" style="grid-template-columns:1fr"><div class="loading"><div class="spinner" style="border-top-color:var(--f1-c)"></div>載入中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BWF ══ -->
+<div class="view" id="view-BWF">
+  <div class="snav" id="snav-BWF">
+    <button class="snav-btn on" onclick="goSec('scores',this)">近期大賽</button>
+    <button class="snav-btn" onclick="goSec('schedule',this)">賽程</button>
+  </div>
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-title" style="color:var(--bwf-c)">BWF</div>
+      <div class="hero-sub">World Tour 2026</div>
+    </div>
+  </div>
+  <div class="content">
+    <div id="bwf-sec-scores">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--bwf-c)">近期大賽結果</div></div>
+      <div id="bwf-events"></div>
+    </div>
+    <div id="bwf-sec-schedule" style="display:none">
+      <div class="section-hd"><div class="section-title" style="--sc:var(--bwf-c)">即將到來</div></div>
+      <div class="sched-table" id="bwf-sched"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  CONFIG — 全部免費，無需 API Key
+//  本地開發：直接打官方端點（需用 npx serve . 跑伺服器）
+//  Vercel 部署後：走 /api/* proxy，CORS 問題完全消失
+// ═══════════════════════════════════════
+const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+
+const CFG = {
+  // NBA — nba.com 官方 CDN（免費、無需 Key、10秒更新）
+  NBA_SCOREBOARD: IS_LOCAL
+    ? 'https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json'
+    : '/api/nba/liveData/scoreboard/todaysScoreboard_00.json',
+  NBA_SCHEDULE: IS_LOCAL
+    ? 'https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json'
+    : '/api/nba/staticData/scheduleLeagueV2_1.json',
+  NBA_STANDINGS: IS_LOCAL
+    ? 'https://cdn.nba.com/static/json/staticData/standings.json'
+    : '/api/nba/staticData/standings.json',
+  // MLB — statsapi.mlb.com（mlb.com 官網使用的同一個後端）
+  MLB: IS_LOCAL
+    ? 'https://statsapi.mlb.com/api/v1'
+    : '/api/mlb',
+  // F1 — Jolpica / Ergast 相容 API
+  F1: IS_LOCAL
+    ? 'https://api.jolpi.ca/ergast/f1'
+    : '/api/f1',
+};
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let sport = 'NBA';
+let section = 'scores';
+let loaded = {};
+let favs   = new Set(JSON.parse(localStorage.getItem('cs_favs')  || '[]'));
+let notifs = new Set(JSON.parse(localStorage.getItem('cs_notifs')|| '[]'));
+
+// ═══════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════
+const THEME = {
+  NBA: { c:'#C9082A', bg:'#fff4f5', bd:'#ffd0d4' },
+  MLB: { c:'#002D72', bg:'#f0f4ff', bd:'#c5d2f0' },
+  F1:  { c:'#E10600', bg:'#fff4f0', bd:'#ffd0c8' },
+  BWF: { c:'#00873E', bg:'#f0faf4', bd:'#b0e0c4' },
+};
+function applyTheme(s) {
+  const t = THEME[s];
+  const r = document.documentElement.style;
+  r.setProperty('--sc',  t.c);
+  r.setProperty('--sbg', t.bg);
+  r.setProperty('--sbd', t.bd);
+  document.getElementById('nav-bar').style.background = t.c;
+}
+
+// ═══════════════════════════════════════
+//  NAV / SECTION
+// ═══════════════════════════════════════
+function switchSport(s, btn) {
+  if (sport === s) return;
+  sport = s;
+  document.querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.getElementById('view-'+s).classList.add('on');
+  applyTheme(s);
+  goSec(section);
+  if (!loaded[s]) loadSport(s);
+}
+
+function goSec(sec, btn) {
+  section = sec;
+  // hide all sections for current sport
+  ['scores','schedule','standings'].forEach(k => {
+    const el = document.getElementById(sport+'-sec-'+k);
+    if (el) el.style.display = k === sec ? '' : 'none';
+  });
+  // update snav
+  document.querySelectorAll('#snav-'+sport+' .snav-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  // lazy load
+  const loaders = {
+    NBA: { schedule: loadNBASchedule, standings: loadNBAStandings },
+    MLB: { schedule: loadMLBSchedule, standings: loadMLBStandings },
+    F1:  { schedule: loadF1Schedule,  standings: loadF1Standings },
+  };
+  loaders[sport]?.[sec]?.();
+  // update desktop nav links
+  document.querySelectorAll('.nav-link').forEach(l => {
+    l.classList.toggle('on', l.textContent === {scores:'成績',schedule:'賽程',standings:'積分榜'}[sec]);
+  });
+  document.querySelectorAll('.drawer-link').forEach(l => {
+    l.classList.toggle('on', l.textContent === {scores:'成績',schedule:'賽程',standings:'積分榜'}[sec]);
+  });
+}
+
+function toggleDrawer() { document.getElementById('drawer').classList.toggle('on'); }
+function closeDrawer()  { document.getElementById('drawer').classList.remove('on'); }
+
+// ═══════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════
+function todayStr() { return new Date().toLocaleDateString('en-CA'); }
+
+function fmtTW(utc) {
+  if (!utc) return '—';
+  return new Date(utc).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Taipei'});
+}
+
+function saveFav(id)   { favs.has(id)?favs.delete(id):favs.add(id);   localStorage.setItem('cs_favs',  JSON.stringify([...favs])); }
+function saveNotif(id) { notifs.has(id)?notifs.delete(id):notifs.add(id); localStorage.setItem('cs_notifs',JSON.stringify([...notifs])); }
+
+function toggleFav(id,btn)   { saveFav(String(id));   btn.classList.toggle('on'); }
+function toggleNotif(id,btn) {
+  saveNotif(String(id));
+  btn.classList.toggle('on');
+  btn.textContent = notifs.has(String(id)) ? '✓ 已提醒' : '＋ 提醒';
+  if (notifs.has(String(id)) && 'Notification' in window) Notification.requestPermission();
+}
+
+// ═══════════════════════════════════════
+//  GAME CARD RENDERER
+// ═══════════════════════════════════════
+function gcard(g) {
+  const id = String(g.id);
+  const isFav   = favs.has(id);
+  const isNotif = notifs.has(id);
+  const statusHtml =
+    g.status==='live'
+      ? `<span class="status-badge s-live"><span class="live-dot"></span>LIVE ${g.period||''}</span>`
+    : g.status==='final'
+      ? `<span class="status-badge s-fin">FINAL</span>`
+      : `<span class="status-badge s-pre">${g.time||'—'}</span>`;
+  const scoreHtml = (g.homeScore != null)
+    ? `<div class="gcard-score">${g.homeScore}<span class="gcard-sep">–</span>${g.awayScore}</div>
+       <div class="gcard-period">${g.period||''}</div>`
+    : `<div class="gcard-vs">VS</div>`;
+  return `<div class="gcard" data-s="${g.sport}">
+    <div class="gcard-bar"></div>
+    <div class="gcard-hd">
+      ${statusHtml}
+      <button class="gcard-fav${isFav?' on':''}" onclick="toggleFav('${id}',this)">★</button>
+    </div>
+    <div class="gcard-body">
+      <div class="gcard-team">
+        <div class="gcard-abbr">${g.homeAbbr}</div>
+        <div class="gcard-name">${g.home}</div>
+      </div>
+      <div class="gcard-mid">${scoreHtml}</div>
+      <div class="gcard-team">
+        <div class="gcard-abbr">${g.awayAbbr}</div>
+        <div class="gcard-name">${g.away}</div>
+      </div>
+    </div>
+    <div class="gcard-ft">
+      <span class="gcard-meta">${g.venue||''}</span>
+      ${g.status==='upcoming'
+        ? `<button class="notify-btn${isNotif?' on':''}" onclick="toggleNotif('${id}',this)">${isNotif?'✓ 已提醒':'＋ 提醒'}</button>`
+        : ''}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+//  NBA — cdn.nba.com（官方 CDN，免費無需 Key）
+//  端點每 10 秒更新，直接是 nba.com 的數據源
+// ═══════════════════════════════════════
+
+// NBA 隊伍 ID → 名稱對照（cdn.nba.com 回傳 teamId，需要自己對應）
+const NBA_TEAMS = {
+  1610612737:{abbr:'ATL',name:'Hawks'},    1610612738:{abbr:'BOS',name:'Celtics'},
+  1610612739:{abbr:'CLE',name:'Cavaliers'},1610612740:{abbr:'OKC',name:'Thunder'},
+  1610612741:{abbr:'CHI',name:'Bulls'},    1610612742:{abbr:'DAL',name:'Mavericks'},
+  1610612743:{abbr:'DEN',name:'Nuggets'},  1610612744:{abbr:'GSW',name:'Warriors'},
+  1610612745:{abbr:'HOU',name:'Rockets'},  1610612746:{abbr:'LAC',name:'Clippers'},
+  1610612747:{abbr:'LAL',name:'Lakers'},   1610612748:{abbr:'MIA',name:'Heat'},
+  1610612749:{abbr:'MIL',name:'Bucks'},    1610612750:{abbr:'MIN',name:'Timberwolves'},
+  1610612751:{abbr:'BKN',name:'Nets'},     1610612752:{abbr:'NYK',name:'Knicks'},
+  1610612753:{abbr:'ORL',name:'Magic'},    1610612754:{abbr:'IND',name:'Pacers'},
+  1610612755:{abbr:'PHI',name:'76ers'},    1610612756:{abbr:'PHX',name:'Suns'},
+  1610612757:{abbr:'POR',name:'Trail Blazers'},1610612758:{abbr:'SAC',name:'Kings'},
+  1610612759:{abbr:'SAS',name:'Spurs'},    1610612760:{abbr:'OKC',name:'Thunder'},
+  1610612761:{abbr:'TOR',name:'Raptors'},  1610612762:{abbr:'UTA',name:'Jazz'},
+  1610612763:{abbr:'MEM',name:'Grizzlies'},1610612764:{abbr:'WAS',name:'Wizards'},
+  1610612765:{abbr:'DET',name:'Pistons'},  1610612766:{abbr:'CHA',name:'Hornets'},
+};
+
+function nbaTeam(id) {
+  return NBA_TEAMS[id] || { abbr: String(id).slice(-3), name: 'Team' };
+}
+
+async function loadNBA() {
+  const el = document.getElementById('nba-cards');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>載入 NBA 數據…</div>';
+  try {
+    // cdn.nba.com 需要 Referer header，但瀏覽器 fetch 的 no-cors 有限制
+    // 用 mode:'cors' 加上 cache:'no-store' 確保拿到最新數據
+    const r = await fetch(CFG.NBA_SCOREBOARD, {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    });
+    const json = await r.json();
+    const games = json?.scoreboard?.games || [];
+
+    if (!games.length) {
+      el.innerHTML = '<div class="empty">今日無 NBA 賽事（賽季休息日）</div>';
+      document.getElementById('nba-stat-live').textContent  = 0;
+      document.getElementById('nba-stat-today').textContent = 0;
+      return;
+    }
+
+    const mapped = games.map(g => {
+      // gameStatus: 1=未開始, 2=進行中, 3=結束
+      const st = g.gameStatus;
+      const home = nbaTeam(g.homeTeam.teamId);
+      const away = nbaTeam(g.awayTeam.teamId);
+      // 用 teamTricode 覆蓋（更準確）
+      const homeAbbr = g.homeTeam.teamTricode || home.abbr;
+      const awayAbbr = g.awayTeam.teamTricode || away.abbr;
+      const homeName = g.homeTeam.teamName || home.name;
+      const awayName = g.awayTeam.teamName || away.name;
+
+      let status, period, timeStr;
+      if (st === 3) {
+        status = 'final'; period = '';
+      } else if (st === 2) {
+        status = 'live';
+        const p = g.period;
+        const clk = g.gameClock?.replace('PT','').replace('M',':').replace('S','') || '';
+        period = p <= 4 ? `Q${p} ${clk}` : `OT${p-4} ${clk}`;
+      } else {
+        status = 'upcoming';
+        timeStr = fmtTW(g.gameTimeUTC);
+      }
+
+      return {
+        id: g.gameId, sport: 'NBA',
+        home: homeName, homeAbbr,
+        away: awayName, awayAbbr,
+        homeScore: st > 1 ? g.homeTeam.score : null,
+        awayScore: st > 1 ? g.awayTeam.score : null,
+        status, period, time: timeStr,
+        venue: g.arenaName || '',
+      };
+    });
+
+    el.innerHTML = mapped.map(gcard).join('');
+    document.getElementById('nba-stat-live').textContent  = mapped.filter(g=>g.status==='live').length;
+    document.getElementById('nba-stat-today').textContent = mapped.length;
+
+    // 有直播中的比賽 → 每 30 秒自動刷新
+    if (mapped.some(g=>g.status==='live'))
+      setTimeout(()=>{ if(sport==='NBA') loadNBA(); }, 30000);
+
+    loaded.nba_games = true;
+  } catch(e) {
+    // cdn.nba.com 有時會有 CORS 問題（本地開發需要 proxy 或 extension）
+    el.innerHTML = `<div class="empty">
+      ⚠ 無法連線到 cdn.nba.com<br>
+      <small style="color:var(--g400);font-size:11px;margin-top:6px;display:block">
+        本地開啟 HTML 檔時，瀏覽器的 CORS 政策會封鎖跨域請求。<br>
+        部署上線後即可正常讀取官方數據。<br>
+        錯誤：${e.message}
+      </small>
+    </div>`;
+  }
+}
+
+async function loadNBASchedule() {
+  if (loaded.nba_sched) return;
+  const el = document.getElementById('nba-sched');
+  if (!el) return;
+  el.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(CFG.NBA_SCHEDULE, { cache: 'no-store' });
+    const json = await r.json();
+    // 找出未來 7 天的賽事
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const nextWeek = new Date(today); nextWeek.setDate(nextWeek.getDate()+8);
+
+    const gameDays = json?.leagueSchedule?.gameDates || [];
+    let rows = '';
+    let count = 0;
+
+    for (const day of gameDays) {
+      const dayDate = new Date(day.gameDate);
+      if (dayDate < today || dayDate > nextWeek) continue;
+      const label = dayDate.toLocaleDateString('zh-TW',{month:'numeric',day:'numeric',weekday:'short'});
+      const dayRows = day.games.map(g => {
+        const homeAbbr = g.homeTeam?.teamTricode || '';
+        const awayAbbr = g.awayTeam?.teamTricode || '';
+        return `<div class="sched-row">
+          <span class="sched-sport-tag tag-nba">NBA</span>
+          <span class="sched-match">${awayAbbr} @ ${homeAbbr}</span>
+          <span class="sched-time">${fmtTW(g.gameDateTimeUTC)}</span>
+          <div class="sched-action"><button class="sched-notify" onclick="toggleNotif('nba-${g.gameId}',this)">＋ 提醒</button></div>
+        </div>`;
+      }).join('');
+      if (dayRows) {
+        rows += `<div class="sched-day">${label}</div>${dayRows}`;
+        count++;
+        if (count >= 4) break;
+      }
+    }
+    el.innerHTML = rows || '<div class="empty">暫無賽程資料</div>';
+    loaded.nba_sched = true;
+  } catch(e) {
+    el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`;
+  }
+}
+
+async function loadNBAStandings() {
+  if (loaded.nba_stand) return;
+  const el = document.getElementById('nba-standings');
+  if (!el) return;
+  el.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(CFG.NBA_STANDINGS, { cache: 'no-store' });
+    const json = await r.json();
+    const allTeams = json?.standings || [];
+
+    const east = allTeams
+      .filter(t => t.conference === 'East')
+      .sort((a,b) => a.confRank - b.confRank);
+    const west = allTeams
+      .filter(t => t.conference === 'West')
+      .sort((a,b) => a.confRank - b.confRank);
+
+    el.innerHTML = confTable('東區', east, 'var(--nba-c)', true)
+                 + confTable('西區', west, '#17408B', true);
+    loaded.nba_stand = true;
+  } catch(e) {
+    el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`;
+  }
+}
+
+function confTable(name, teams, col, isNBA=false) {
+  const getAbbr = t => isNBA ? (t.teamAbbreviation || t.team?.abbreviation || '') : (t.team?.abbreviation || t.abbreviation || '');
+  const getName = t => isNBA ? (t.teamName || t.team?.name || '') : (t.team?.name || t.teamName || '');
+  const getW    = t => isNBA ? (t.wins ?? t.win) : t.wins;
+  const getL    = t => isNBA ? (t.losses ?? t.loss) : t.losses;
+
+  return `<div class="stand-table">
+    <div class="stand-conf-hd" style="color:${col}">${name}</div>
+    <div class="stand-cols"><span style="text-align:center">#</span><span>球隊</span><span style="text-align:center">勝</span><span style="text-align:center">負</span><span style="text-align:center">勝率</span></div>
+    ${teams.slice(0,8).map((t,i) => {
+      const w = getW(t) ?? 0, l = getL(t) ?? 0;
+      return `<div class="stand-row">
+        <div class="stand-rank ${i<6?'hi':''}">${i+1}</div>
+        <div class="stand-name">${getAbbr(t)} <span style="color:var(--g400);font-weight:400">${getName(t)}</span></div>
+        <div class="stand-num">${w}</div>
+        <div class="stand-num">${l}</div>
+        <div class="stand-pct">${((w/(w+l))||0).toFixed(3)}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+//  MLB — statsapi.mlb.com（mlb.com 官方後端，免費無需 Key）
+//  這正是 mlb.com/scores 頁面本身呼叫的 API
+// ═══════════════════════════════════════
+
+// mlb.com Scores 頁面使用的完整 hydrate 參數
+const MLB_HYDRATE = [
+  'linescore(matchup,runners)',
+  'flags', 'statusFlags',
+  'broadcasts(all)',
+  'venue(location)',
+  'decisions',
+  'probablePitcher',
+  'game(content(media(epg),summary),tickets)',
+  'seriesStatus(useOverride=true)',
+  'team',
+].join(',');
+
+// 局數中文顯示
+const INNING_HALF = { top: '上', bottom: '下' };
+
+function mlbInning(ls) {
+  if (!ls?.currentInning) return '';
+  const half = ls.isTopInning ? '上' : '下';
+  return `${half}${ls.currentInning}局`;
+}
+
+function mlbStatus(g) {
+  const code = g.status?.abstractGameCode;   // 'P'=預定, 'L'=直播, 'F'=結束
+  const state = g.status?.detailedState || '';
+  const live = code === 'L' || state === 'In Progress' || state === 'Manager challenge';
+  const final = code === 'F' || state === 'Final' || state === 'Game Over' || state === 'Completed Early';
+  return { live, final, pre: !live && !final };
+}
+
+async function loadMLB() {
+  const el = document.getElementById('mlb-cards');
+  el.innerHTML = '<div class="loading"><div class="spinner" style="border-top-color:var(--mlb-c)"></div>載入 MLB 數據…</div>';
+  try {
+    // 使用跟 mlb.com 官網完全相同的 API 端點與參數
+    const url = `${CFG.MLB}/schedule?sportId=1&date=${todayStr()}`
+      + `&gameType=E&&gameType=S&&gameType=R&&gameType=F&&gameType=D&&gameType=L&&gameType=W&&gameType=A&&gameType=C`
+      + `&language=zh&leagueId=104&&leagueId=103&&leagueId=160&&leagueId=590`
+      + `&hydrate=${encodeURIComponent(MLB_HYDRATE)}`
+      + `&sortBy=gameDate,gameStatus,gameType`;
+
+    const r = await fetch(url);
+    const data = await r.json();
+    const games = data.dates?.[0]?.games || [];
+
+    if (!games.length) {
+      el.innerHTML = '<div class="empty">今日無 MLB 賽事</div>';
+      document.getElementById('mlb-stat-live').textContent  = 0;
+      document.getElementById('mlb-stat-today').textContent = 0;
+      return;
+    }
+
+    const mapped = games.map(g => {
+      const { live, final } = mlbStatus(g);
+      const ls = g.linescore;
+      // 先發投手顯示
+      const homeP = g.teams?.home?.probablePitcher?.lastName || '';
+      const awayP = g.teams?.away?.probablePitcher?.lastName || '';
+      const pitcherNote = (!live && !final && homeP) ? `${awayP||'?'} vs ${homeP||'?'}` : '';
+      return {
+        id: g.gamePk, sport: 'MLB',
+        home:     g.teams.home.team.clubName || g.teams.home.team.teamName,
+        homeAbbr: g.teams.home.team.abbreviation,
+        away:     g.teams.away.team.clubName || g.teams.away.team.teamName,
+        awayAbbr: g.teams.away.team.abbreviation,
+        homeScore: (live||final) ? (ls?.teams?.home?.runs ?? null) : null,
+        awayScore: (live||final) ? (ls?.teams?.away?.runs ?? null) : null,
+        status: live ? 'live' : final ? 'final' : 'upcoming',
+        period: live ? mlbInning(ls) : final ? 'F/'+ls?.currentInning : '',
+        time: fmtTW(g.gameDate),
+        venue: g.venue?.name || '',
+        note: pitcherNote,
+      };
+    });
+
+    el.innerHTML = mapped.map(gcard).join('');
+    document.getElementById('mlb-stat-live').textContent  = mapped.filter(g=>g.status==='live').length;
+    document.getElementById('mlb-stat-today').textContent = mapped.length;
+
+    // 進行中比賽每 30 秒刷新（與 mlb.com 官網相同頻率）
+    if (mapped.some(g=>g.status==='live'))
+      setTimeout(()=>{ if(sport==='MLB') loadMLB(); }, 30000);
+
+    loaded.mlb_games = true;
+  } catch(e) {
+    el.innerHTML = `<div class="empty">⚠ 無法連線到 statsapi.mlb.com<br><small style="color:var(--g400);font-size:11px">${e.message}</small></div>`;
+  }
+}
+
+async function loadMLBSchedule() {
+  if (loaded.mlb_sched) return;
+  const el = document.getElementById('mlb-sched');
+  el.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner" style="border-top-color:var(--mlb-c)"></div></div>';
+  try {
+    const start = new Date(); start.setDate(start.getDate()+1);
+    const end   = new Date(); end.setDate(end.getDate()+8);
+    const url = `${CFG.MLB}/schedule?sportId=1`
+      + `&startDate=${start.toLocaleDateString('en-CA')}&endDate=${end.toLocaleDateString('en-CA')}`
+      + `&gameType=R&&gameType=S&leagueId=103&&leagueId=104`
+      + `&hydrate=team,venue,probablePitcher,broadcasts(all)`
+      + `&sortBy=gameDate,gameStatus`;
+    const r = await fetch(url);
+    const data = await r.json();
+    let rows = '';
+    (data.dates||[]).forEach(day => {
+      const label = new Date(day.date+'T12:00:00').toLocaleDateString('zh-TW',{month:'numeric',day:'numeric',weekday:'short'});
+      rows += `<div class="sched-day">${label}</div>`;
+      day.games.slice(0,8).forEach(g => {
+        const homeP = g.teams?.home?.probablePitcher?.lastName;
+        const awayP = g.teams?.away?.probablePitcher?.lastName;
+        const pitcher = (homeP||awayP) ? ` — ${awayP||'?'} vs ${homeP||'?'}` : '';
+        rows += `<div class="sched-row">
+          <span class="sched-sport-tag tag-mlb">MLB</span>
+          <span class="sched-match">${g.teams.away.team.abbreviation} @ ${g.teams.home.team.abbreviation}${pitcher}</span>
+          <span class="sched-time">${fmtTW(g.gameDate)}</span>
+          <div class="sched-action"><button class="sched-notify" onclick="toggleNotif('mlb-${g.gamePk}',this)">＋ 提醒</button></div>
+        </div>`;
+      });
+    });
+    el.innerHTML = rows || '<div class="empty">暫無賽程資料</div>';
+    loaded.mlb_sched = true;
+  } catch(e) { el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`; }
+}
+
+async function loadMLBStandings() {
+  if (loaded.mlb_stand) return;
+  const el = document.getElementById('mlb-standings');
+  el.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner" style="border-top-color:var(--mlb-c)"></div></div>';
+  try {
+    // mlb.com/standings 使用的端點
+    const r = await fetch(
+      `${CFG.MLB}/standings?leagueId=103,104&season=2026&standingsTypes=regularSeason`
+      + `&hydrate=team,division,conference,league&fields=records,standingsType,teamRecords,`
+      + `team,name,abbreviation,teamName,wins,losses,winningPercentage,gamesBack,`
+      + `divisionGamesBack,leagueGamesBack,wildCardGamesBack,streak,streakCode,`
+      + `divisionRank,leagueRank,wildCardRank,magicNumber,eliminationNumber`
+    );
+    const data = await r.json();
+    let html = '';
+    // mlb.com 按分區（Division）分組顯示，共 6 個分區
+    const DIVS = ['AL East','AL Central','AL West','NL East','NL Central','NL West'];
+    (data.records||[]).forEach(div => {
+      const divName = div.division?.name || div.division?.nameShort || 'Division';
+      const teams = (div.teamRecords||[]).sort((a,b)=>a.divisionRank-b.divisionRank);
+      html += `<div class="stand-table">
+        <div class="stand-conf-hd" style="color:var(--mlb-c)">${divName}</div>
+        <div class="stand-cols" style="grid-template-columns:28px 1fr 32px 32px 50px 46px">
+          <span style="text-align:center">#</span><span>球隊</span>
+          <span style="text-align:center">勝</span><span style="text-align:center">負</span>
+          <span style="text-align:center">勝率</span><span style="text-align:center">差距</span>
+        </div>
+        ${teams.map((t,i) => `<div class="stand-row" style="grid-template-columns:28px 1fr 32px 32px 50px 46px">
+          <div class="stand-rank ${i===0?'hi':''}">${i+1}</div>
+          <div class="stand-name">${t.team?.abbreviation||''} <span style="color:var(--g400);font-weight:400">${t.team?.teamName||''}</span></div>
+          <div class="stand-num">${t.wins}</div>
+          <div class="stand-num">${t.losses}</div>
+          <div class="stand-pct">${t.winningPercentage||'—'}</div>
+          <div class="stand-pct">${i===0?'—':(t.gamesBack||'—')}</div>
+        </div>`).join('')}
+      </div>`;
+    });
+    el.innerHTML = html || '<div class="empty">暫無積分榜資料</div>';
+    loaded.mlb_stand = true;
+  } catch(e) { el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`; }
+}
+
+// ═══════════════════════════════════════
+//  F1  (Jolpica / Ergast-compatible)
+// ═══════════════════════════════════════
+async function loadF1() {
+  const el = document.getElementById('f1-race');
+  el.innerHTML = '<div class="loading"><div class="spinner" style="border-top-color:var(--f1-c)"></div>載入 F1 數據…</div>';
+  try {
+    const r = await fetch(`${CFG.F1}/current/last/results.json?limit=20`);
+    const json = await r.json();
+    const race = json?.MRData?.RaceTable?.Races?.[0];
+    if (!race) { el.innerHTML = '<div class="empty">暫無賽事資料</div>'; return; }
+    const res = race.Results||[];
+    const pod = res.slice(0,3);
+    el.innerHTML = `<div class="race-card">
+      <div class="race-banner">
+        <div>
+          <div class="race-name">${race.raceName}</div>
+          <div class="race-round">ROUND ${race.round} · ${race.Circuit.Location.country} · ${race.Circuit.circuitName}</div>
+        </div>
+        <div class="race-date-label">${race.date}</div>
+      </div>
+      <div class="race-podium">
+        ${pod.map((r,i)=>`<div class="podium-cell">
+          <div class="podium-pos">${i+1}</div>
+          <div class="podium-driver">${r.Driver.familyName}</div>
+          <div class="podium-team">${r.Constructor.name}</div>
+        </div>`).join('')}
+      </div>
+      <div class="race-results">
+        <div class="race-results-hd">完整成績</div>
+        ${res.slice(0,15).map(r=>`<div class="result-row">
+          <div class="result-pos">${r.position}</div>
+          <div class="result-name">${r.Driver.givenName} ${r.Driver.familyName}</div>
+          <div class="result-team">${r.Constructor.name}</div>
+          <div class="result-time">${r.Time?.time||r.status}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+    loaded.f1_race = true;
+  } catch(e) { el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`; }
+}
+
+async function loadF1Schedule() {
+  if (loaded.f1_sched) return;
+  const el = document.getElementById('f1-sched');
+  el.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner" style="border-top-color:var(--f1-c)"></div></div>';
+  try {
+    const r = await fetch(`${CFG.F1}/current.json`);
+    const json = await r.json();
+    const races = (json?.MRData?.RaceTable?.Races||[]).filter(r=>new Date(r.date)>=new Date()).slice(0,10);
+    el.innerHTML = races.map(r=>`<div class="sched-row">
+      <span class="sched-sport-tag tag-f1">F1</span>
+      <span class="sched-match">${r.raceName} · ${r.Circuit.Location.country}</span>
+      <span class="sched-time">${r.date}</span>
+      <div class="sched-action"><button class="sched-notify" onclick="toggleNotif('f1-${r.round}',this)">＋ 提醒</button></div>
+    </div>`).join('') || '<div class="empty">賽季已結束</div>';
+    loaded.f1_sched = true;
+  } catch(e) { el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`; }
+}
+
+async function loadF1Standings() {
+  if (loaded.f1_stand) return;
+  const el = document.getElementById('f1-standings');
+  el.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner" style="border-top-color:var(--f1-c)"></div></div>';
+  try {
+    const r = await fetch(`${CFG.F1}/current/driverStandings.json`);
+    const json = await r.json();
+    const st = json?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings||[];
+    el.innerHTML = `<div class="stand-table" style="grid-column:1/-1">
+      <div class="stand-conf-hd" style="color:var(--f1-c)">2026 車手積分榜</div>
+      <div class="stand-cols" style="grid-template-columns:28px 1fr 140px 60px">
+        <span style="text-align:center">#</span><span>車手</span><span>車隊</span><span style="text-align:center">積分</span>
+      </div>
+      ${st.slice(0,20).map((s,i)=>`<div class="stand-row" style="grid-template-columns:28px 1fr 140px 60px">
+        <div class="stand-rank ${i<3?'hi':''}">${s.position}</div>
+        <div class="stand-name">${s.Driver.givenName} ${s.Driver.familyName}</div>
+        <div class="stand-pct">${s.Constructors[0]?.name||''}</div>
+        <div class="stand-num">${s.points}</div>
+      </div>`).join('')}
+    </div>`;
+    loaded.f1_stand = true;
+  } catch(e) { el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`; }
+}
+
+// ═══════════════════════════════════════
+//  BWF  (靜態近期數據；無官方開放 API)
+// ═══════════════════════════════════════
+function loadBWF() {
+  const events = [
+    {
+      name:'瑞士公開賽 2026', level:'Super 300', date:'3月10–15日', city:'巴塞爾',
+      results:{
+        '男單':{ w:'田中佑志 🇯🇵', r:'Alwi Farhan 🇮🇩', sc:'21-17, 21-19' },
+        '女單':{ w:'Supanida Katethong 🇹🇭', r:'Putri K. Wardani 🇮🇩', sc:'21-11, 21-15' },
+        '男雙':{ w:'李昉志/李昉諴 🇹🇼', r:'Lundgaard/Vestergaard 🇩🇰', sc:'21-18, 21-16' },
+        '女雙':{ w:'李奕晶/王亦鐸 🇨🇳', r:'賈一凡/張淑賢 🇨🇳', sc:'21-16, 21-18' },
+        '混雙':{ w:'鄭昕/張弛 🇨🇳', r:'Seo Seung-jae/Chae Yu-jung 🇰🇷', sc:'21-15, 21-17' },
+      }
+    },
+    {
+      name:'全英公開賽 2026', level:'Super 1000', date:'3月3–8日', city:'伯明罕',
+      results:{
+        '男單':{ w:'林俊易 🇹🇼', r:'拉克什亞·森 🇮🇳', sc:'21-15, 22-20' },
+        '女單':{ w:'王志怡 🇨🇳', r:'安洗瑩 🇰🇷', sc:'21-15, 21-19' },
+        '男雙':{ w:'李洋/王齊麟 🇹🇼', r:'梁偉鏗/王昶 🇨🇳', sc:'21-18, 21-15' },
+        '女雙':{ w:'郭新娃/陳芳慧 🇨🇳', r:'Nami Matsuyama/Chiharu Shida 🇯🇵', sc:'21-18, 21-16' },
+        '混雙':{ w:'葉宏偉/李佳馨 🇹🇼', r:'Zheng Siwei/Huang Yaqiong 🇨🇳', sc:'21-19, 21-15' },
+      }
+    }
+  ];
+
+  document.getElementById('bwf-events').innerHTML = events.map(ev=>`
+    <div class="bwf-event">
+      <div class="bwf-event-hd">
+        <div>
+          <div class="bwf-event-name">${ev.name}</div>
+          <div class="bwf-event-sub">${ev.date} · ${ev.city}</div>
+        </div>
+        <span class="bwf-level">${ev.level}</span>
+      </div>
+      <div class="bwf-cats">
+        ${Object.entries(ev.results).map(([cat,r])=>`
+          <div class="bwf-match">
+            <div class="bwf-match-hd"><span>${cat} — 決賽</span></div>
+            <div class="bwf-player">
+              <span class="bwf-pname winner">🏆 ${r.w}</span>
+            </div>
+            <div class="bwf-player">
+              <span class="bwf-pname">🥈 ${r.r}</span>
+            </div>
+            <div class="bwf-score-bar">${r.sc}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  document.getElementById('bwf-sched').innerHTML = [
+    {date:'3/31',match:'奧爾良大師賽 (Super 300) — 正賽',city:'法國·奧爾良'},
+    {date:'4/1', match:'奧爾良大師賽 — 四強賽',city:'法國·奧爾良'},
+    {date:'4/2', match:'奧爾良大師賽 — 決賽',city:'法國·奧爾良'},
+    {date:'4/22',match:'馬來西亞公開賽 (Super 750)',city:'馬來西亞·吉隆坡'},
+    {date:'5/6', match:'泰國公開賽 (Super 500)',city:'泰國·曼谷'},
+    {date:'5/27',match:'印尼公開賽 (Super 1000)',city:'印尼·雅加達'},
+  ].map(s=>`<div class="sched-row">
+    <span class="sched-sport-tag tag-bwf">BWF</span>
+    <span class="sched-match">${s.match}</span>
+    <span class="sched-time">${s.city}</span>
+    <div class="sched-action"><button class="sched-notify" onclick="toggleNotif('bwf-${s.date}',this)">＋ 提醒</button></div>
+  </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+//  LOAD DISPATCHER
+// ═══════════════════════════════════════
+async function loadSport(s) {
+  loaded[s] = true;
+  if (s==='NBA') await loadNBA();
+  if (s==='MLB') await loadMLB();
+  if (s==='F1')  await loadF1();
+  if (s==='BWF') loadBWF();
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const d = new Date();
+  document.getElementById('nav-date').textContent =
+    d.toLocaleDateString('zh-TW',{month:'long',day:'numeric',weekday:'short'});
+  applyTheme('NBA');
+  goSec('scores');
+  loadSport('NBA');
+});
+</script>
+</body>
+</html>
