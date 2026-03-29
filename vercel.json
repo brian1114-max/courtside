@@ -1,47 +1,21 @@
 {
   "version": 2,
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "routes": [
-    {
-      "src": "/api/nba/(.*)",
-      "dest": "https://cdn.nba.com/static/json/$1",
-      "headers": {
-        "Cache-Control": "public, s-maxage=10, stale-while-revalidate=5"
-      }
-    },
-    {
-      "src": "/api/mlb/(.*)",
-      "dest": "https://statsapi.mlb.com/api/v1/$1",
-      "headers": {
-        "Cache-Control": "public, s-maxage=15, stale-while-revalidate=10"
-      }
-    },
-    {
-      "src": "/api/f1/(.*)",
-      "dest": "https://api.jolpi.ca/ergast/f1/$1",
-      "headers": {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html",
-      "headers": {
-        "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
-      }
-    }
+  "functions": {
+    "api/nba.js": { "memory": 256, "maxDuration": 10 },
+    "api/mlb.js": { "memory": 256, "maxDuration": 10 },
+    "api/f1.js":  { "memory": 256, "maxDuration": 10 }
+  },
+  "rewrites": [
+    { "source": "/api/nba/:path*", "destination": "/api/nba" },
+    { "source": "/api/mlb/:path*", "destination": "/api/mlb" },
+    { "source": "/api/f1/:path*",  "destination": "/api/f1"  }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Accept" }
+        { "key": "Access-Control-Allow-Origin",  "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" }
       ]
     }
   ]
