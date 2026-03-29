@@ -1,16 +1,3 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/nba/:match*",
-      "destination": "https://cdn.nba.com/static/json/:match*"
-    },
-    {
-      "source": "/api/mlb/:match*",
-      "destination": "https://statsapi.mlb.com/api/v1/:match*"
-    },
-    {
-      "source": "/api/f1/:match*",
-      "destination": "https://api.jolpi.ca/ergast/f1/:match*"
-    }
-  ]
+  "version": 2
 }
