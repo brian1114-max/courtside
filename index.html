@@ -895,25 +895,13 @@ main { padding-top: calc(var(--nav-h) + var(--tab-h)); }
 // ═══════════════════════════════════════
 const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
 
+// 直接打外部 API — cdn.nba.com、statsapi.mlb.com、jolpi.ca 均已開放 CORS
 const CFG = {
-  // NBA — nba.com 官方 CDN（免費、無需 Key、10秒更新）
-  NBA_SCOREBOARD: IS_LOCAL
-    ? 'https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json'
-    : '/api/nba/liveData/scoreboard/todaysScoreboard_00.json',
-  NBA_SCHEDULE: IS_LOCAL
-    ? 'https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json'
-    : '/api/nba/staticData/scheduleLeagueV2_1.json',
-  NBA_STANDINGS: IS_LOCAL
-    ? 'https://cdn.nba.com/static/json/staticData/standings.json'
-    : '/api/nba/staticData/standings.json',
-  // MLB — statsapi.mlb.com（mlb.com 官網使用的同一個後端）
-  MLB: IS_LOCAL
-    ? 'https://statsapi.mlb.com/api/v1'
-    : '/api/mlb',
-  // F1 — Jolpica / Ergast 相容 API
-  F1: IS_LOCAL
-    ? 'https://api.jolpi.ca/ergast/f1'
-    : '/api/f1',
+  NBA_SCOREBOARD: 'https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json',
+  NBA_SCHEDULE:   'https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json',
+  NBA_STANDINGS:  'https://cdn.nba.com/static/json/staticData/standings.json',
+  MLB:            'https://statsapi.mlb.com/api/v1',
+  F1:             'https://api.jolpi.ca/ergast/f1',
 };
 
 // ═══════════════════════════════════════
@@ -1258,9 +1246,7 @@ async function loadGameDetail(gameId, g) {
   }
 
   try {
-    const boxUrl = IS_LOCAL
-      ? `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`
-      : `/api/nba/liveData/boxscore/boxscore_${gameId}.json`;
+    const boxUrl = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`;
     const r = await fetch(boxUrl, { cache:'no-store' });
     const json = await r.json();
     const game = json?.game;
@@ -1551,16 +1537,8 @@ async function loadNBALeaders() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div>載入中…</div>';
 
   try {
-    // 使用 nba.com stats API 的 leagueleaders 端點
-    const base = IS_LOCAL
-      ? 'https://stats.nba.com/stats'
-      : '/api/nba-stats';
-    const r = await fetch(
-      `${base}/leagueleaders?LeagueID=00&PerMode=PerGame&Scope=S&Season=2025-26&SeasonType=Regular+Season&StatCategory=PTS`,
-      { headers:{ 'Referer':'https://www.nba.com/', 'x-nba-stats-origin':'stats', 'x-nba-stats-token':'true' }, cache:'no-store' }
-    );
-    const json = await r.json();
-    const headers = json?.resultSet?.headers||[];
+    // stats.nba.com 有 CORS 限制，直接拋錯進入 demo 數據
+    throw new Error('use demo data');
     const rows = json?.resultSet?.rowSet||[];
     const idx = k => headers.findIndex(h=>h===k);
 
